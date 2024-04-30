@@ -162,3 +162,7 @@ cython_debug/
 # Data/Storage Dev
 data/
 storage/
+
+# Docker
+Dockerfile
+docker-compose.yml
