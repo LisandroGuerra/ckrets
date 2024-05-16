@@ -1,7 +1,11 @@
 import uuid
 from django.db import models
-# from django_cryptography.fields import encrypt
+from django.conf import settings
+from cryptography.fernet import Fernet
 
+
+ENCRYPTION_KEY = settings.ENCRYPTION_KEY.encode()
+cipher = Fernet(ENCRYPTION_KEY)
 
 class System(models.Model):
     id = models.UUIDField(primary_key = True,
@@ -39,10 +43,10 @@ class Variable(models.Model):
                           default = uuid.uuid4,
                           editable = False,
                           unique=True)
-    name = models.CharField(max_length=100, 
+    key = models.CharField(max_length=100, 
                             blank=False, 
                             null=False, 
-                            verbose_name='Nome')
+                            verbose_name='Chave')
     value = models.CharField(max_length=256, 
                              blank=False, 
                              null=False, 
@@ -51,13 +55,23 @@ class Variable(models.Model):
                                related_name='variables')
 
     class Meta:
-        unique_together = ('name', 'system')
+        unique_together = ('key', 'system')
         verbose_name = 'Variável'
         verbose_name_plural = 'Variáveis'
-        
 
-    def __str__(self):
-        return self.name
+    @property
+    def decrypted_value(self):
+        return cipher.decrypt(self.value.encode()).decode()
+    
+
+    def save(self, *args, **kwargs):
+        if self.value:
+            self.value = cipher.encrypt(self.value.encode()).decode()
+        super(Variable, self).save(*args, **kwargs)
+        
+    
+    def __str__(self) -> str:
+        return f'{self.system.acronym}: {self.key}'        
 
 
 # from django.core.management.utils import get_random_secret_key
